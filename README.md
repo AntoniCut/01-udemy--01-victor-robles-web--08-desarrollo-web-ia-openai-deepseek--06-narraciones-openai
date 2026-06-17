@@ -1,8 +1,8 @@
-# 05 - Assistant de Dietas Semanales con OpenAI
+# 06 - Narraciones de Textos con OpenAI
 
-Asistente conversacional de dietas semanales personalizadas implementado con **JavaScript**, **Node.js**, **Express** y la **API de Chat Completions de OpenAI**. El frontend es un chat estático servido por el propio backend, y el backend expone un endpoint `POST /api/nutri-chatbot` que recopila los datos del usuario (peso, altura, objetivo, alergias, alimentos que no le gustan y comidas diarias) y genera una dieta semanal personalizada en formato tabla markdown, renderizada en el frontend con `markdown-it`.
+Aplicacion de narracion (Text-to-Speech) implementada con **JavaScript**, **Node.js**, **Express** y la **API de Audio Speech de OpenAI**. El usuario introduce un texto en el chat, elige una de las voces disponibles y el backend llama a `openai.audio.speech.create()` con el modelo `tts-1` para generar un audio MP3 que se reproduce directamente en el frontend con un `<audio controls>`. Cada audio muestra ademas la voz utilizada para que sea facil identificarlo.
 
-Repositorio: https://github.com/AntoniCut/01-udemy--01-victor-robles-web--08-desarrollo-web-ia-openai-deepseek--05-assistant-de-dietas-openai
+Repositorio: https://github.com/AntoniCut/01-udemy--01-victor-robles-web--08-desarrollo-web-ia-openai-deepseek--06-narraciones-openai
 
 ---
 
@@ -14,16 +14,17 @@ Repositorio: https://github.com/AntoniCut/01-udemy--01-victor-robles-web--08-des
 4. [Despliegue en local](#despliegue-en-local)
 5. [Despliegue en produccion (VPS + Nginx)](#despliegue-en-produccion-vps--nginx)
 6. [Endpoint API](#endpoint-api)
-7. [Flujo conversacional](#flujo-conversacional)
-8. [Build de produccion con Gulp](#build-de-produccion-con-gulp)
-9. [Licencia](#licencia)
+7. [Voces disponibles](#voces-disponibles)
+8. [UX del chat](#ux-del-chat)
+9. [Build de produccion con Gulp](#build-de-produccion-con-gulp)
+10. [Licencia](#licencia)
 
 ---
 
 ## Stack tecnologico
 
-- **Backend:** Node.js (ES Modules), Express 5, OpenAI Node SDK 6 (Chat Completions API).
-- **Frontend:** HTML + CSS + JS estaticos servidos desde `public/`. `main.js` como modulo ES con importacion local de `markdown-it` para renderizar tablas markdown.
+- **Backend:** Node.js (ES Modules), Express 5, OpenAI Node SDK 6 (Audio Speech API).
+- **Frontend:** HTML + CSS + JS estaticos servidos desde `public/`. `main.js` como modulo ES, reproductor `<audio>` nativo y mensaje temporal "Narrando..." mientras llega la respuesta.
 - **Build:** Gulp 5 (terser, clean-css, htmlmin) para generar `dist/`.
 - **Dev server:** Nodemon.
 - **Despliegue:** Nginx como reverse proxy + PM2 como process manager.
@@ -33,18 +34,18 @@ Dependencias principales (`package.json`):
 | Paquete     | Version  | Uso                                              |
 |-------------|----------|--------------------------------------------------|
 | express     | ^5.2.1   | Servidor HTTP y middleware                       |
-| openai      | ^6.16.0  | SDK de OpenAI (Chat Completions API)             |
+| openai      | ^6.16.0  | SDK de OpenAI (Audio Speech API)                |
 | dotenv      | ^17.2.3  | Carga de variables de entorno                    |
 | axios       | 1.8.1    | Cliente HTTP (utilidades internas)               |
-| markdown-it | ^14.2.0  | Renderizado de tablas markdown en el frontend    |
+| markdown-it | ^14.2.0  | (Dependencia presente, no usada en este chat)   |
 
 ---
 
 ## Estructura del proyecto
 
 ```
-05-assistant-de-dietas-openai/
-├── app.js                  # Servidor Express + endpoint /api/nutri-chatbot
+06-narraciones-openai/
+├── app.js                  # Servidor Express + endpoint /api/speak
 ├── gulpfile.js             # Tareas de build (minificacion, copia a dist/)
 ├── package.json
 ├── pnpm-lock.yaml
@@ -57,10 +58,7 @@ Dependencias principales (`package.json`):
 │       ├── css/
 │       ├── img/
 │       └── js/
-│           ├── main.js             # Modulo ES principal del chat
-│           └── vendor/             # Dependencias frontend locales
-│               ├── markdown-it.min.js
-│               └── markdown-it.esm.js
+│           └── main.js             # Modulo ES principal del chat
 └── types/                  # Tipos JSDoc
 ```
 
@@ -72,7 +70,7 @@ Crea un archivo `.env` en la raiz del proyecto:
 
 ```env
 # Puerto del servidor (en produccion, > 1024 para no necesitar root)
-PORT=1115
+PORT=1116
 
 # API key de OpenAI (https://platform.openai.com/api-keys)
 OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxxxxxxxxxxxxx
@@ -81,7 +79,7 @@ OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxxxxxxxxxxxxx
 Notas:
 
 - `OPENAI_API_KEY` es **obligatoria**. Sin ella, el endpoint devolvera `500`.
-- A diferencia del proyecto 03, este proyecto **no usa Assistants API**, por lo que no se necesita `OPENAI_ASSISTANT_ID`.
+- Este proyecto **no usa Assistants API**, por lo que no se necesita `OPENAI_ASSISTANT_ID`.
 - El archivo `.env` esta incluido en `.gitignore`. **No lo subas al repositorio**.
 
 ---
@@ -97,8 +95,8 @@ Notas:
 
 ```bash
 # 1. Clonar el repositorio
-git clone https://github.com/AntoniCut/01-udemy--01-victor-robles-web--08-desarrollo-web-ia-openai-deepseek--05-assistant-de-dietas-openai.git
-cd 05-assistant-de-dietas-openai
+git clone https://github.com/AntoniCut/01-udemy--01-victor-robles-web--08-desarrollo-web-ia-openai-deepseek--06-narraciones-openai.git
+cd 06-narraciones-openai
 
 # 2. Instalar dependencias
 npm install
@@ -107,7 +105,7 @@ pnpm install
 
 # 3. Crear el archivo .env
 nano .env
-#   PORT=1115
+#   PORT=1116
 #   OPENAI_API_KEY=sk-proj-...
 
 # 4. Arrancar en modo desarrollo (con nodemon)
@@ -119,10 +117,10 @@ npm run serve
 La aplicacion estara disponible en:
 
 ```
-http://localhost:1115/victor-robles-web/08-desarrollo-web-ia-openai-deepseek-javascript-nodejs/05-assistant-de-dietas-openai/
+http://localhost:1116/victor-robles-web/08-desarrollo-web-ia-openai-deepseek-javascript-nodejs/06-narraciones-openai/
 ```
 
-> El puerto por defecto del codigo es `3000`, pero este proyecto usa `1115` para evitar conflicto con otros proyectos del portfolio. Puedes cambiar `PORT` en `.env`.
+> El puerto por defecto del codigo es `3000`, pero este proyecto usa `1116` para evitar conflicto con otros proyectos del portfolio. Puedes cambiar `PORT` en `.env`.
 
 ---
 
@@ -135,7 +133,7 @@ Arquitectura: **Nginx** (reverse proxy + SSL con Let's Encrypt) -> **Node.js** g
 Con FileZilla, sube todo el contenido del proyecto (excepto `node_modules`, `.env` y `dist/`) a:
 
 ```
-/var/www/udemy.antonydev.tech/victor-robles-web/08-desarrollo-web-ia-openai-deepseek-javascript-nodejs/05-assistant-de-dietas-openai
+/var/www/udemy.antonydev.tech/victor-robles-web/08-desarrollo-web-ia-openai-deepseek-javascript-nodejs/06-narraciones-openai
 ```
 
 ### 2. Instalar dependencias en el VPS (sin devDependencies)
@@ -143,18 +141,18 @@ Con FileZilla, sube todo el contenido del proyecto (excepto `node_modules`, `.en
 Conecta por SSH y ejecuta:
 
 ```bash
-cd /var/www/udemy.antonydev.tech/victor-robles-web/08-desarrollo-web-ia-openai-deepseek-javascript-nodejs/05-assistant-de-dietas-openai
+cd /var/www/udemy.antonydev.tech/victor-robles-web/08-desarrollo-web-ia-openai-deepseek-javascript-nodejs/06-narraciones-openai
 
 # Crear el .env de produccion (con tus claves reales)
 nano .env
-#   PORT=1115
+#   PORT=1116
 #   OPENAI_API_KEY=sk-proj-...
 
 # Instalar solo dependencias de produccion
 npm install --omit=dev
 ```
 
-> Importante: en Linux, los puertos < 1024 requieren root. Usa `PORT=1115` o cualquier puerto >= 1024 para no necesitar privilegios.
+> Importante: en Linux, los puertos < 1024 requieren root. Usa `PORT=1116` o cualquier puerto >= 1024 para no necesitar privilegios.
 
 ### 3. Arrancar con PM2 (persiste al cerrar SSH)
 
@@ -163,7 +161,7 @@ npm install --omit=dev
 npm install -g pm2
 
 # Arrancar la app
-pm2 start app.js --name dietas-openai
+pm2 start app.js --name narraciones-openai
 
 # Configurar arranque automatico tras reinicio del servidor
 pm2 startup
@@ -173,20 +171,20 @@ pm2 save
 Comandos utiles de PM2:
 
 ```bash
-pm2 status                    # Ver estado
-pm2 logs dietas-openai        # Ver logs en tiempo real
-pm2 restart dietas-openai     # Reiniciar
-pm2 stop dietas-openai        # Detener
-pm2 delete dietas-openai      # Eliminar del registro
+pm2 status                          # Ver estado
+pm2 logs narraciones-openai         # Ver logs en tiempo real
+pm2 restart narraciones-openai      # Reiniciar
+pm2 stop narraciones-openai         # Detener
+pm2 delete narraciones-openai       # Eliminar del registro
 ```
 
 ### 4. Configurar Nginx como reverse proxy
 
-Edita el bloque `server` de tu vhost (`/etc/nginx/sites-available/udemy.antonydev.tech` o donde lo tengas) y añade una `location`:
+Edita el bloque `server` de tu vhost (`/etc/nginx/sites-available/udemy.antonydev.tech` o donde lo tengas) y anade una `location`:
 
 ```nginx
-location ^~ /victor-robles-web/08-desarrollo-web-ia-openai-deepseek-javascript-nodejs/05-assistant-de-dietas-openai {
-    proxy_pass http://localhost:1115;
+location ^~ /victor-robles-web/08-desarrollo-web-ia-openai-deepseek-javascript-nodejs/06-narraciones-openai {
+    proxy_pass http://localhost:1116;
     proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
@@ -207,82 +205,76 @@ sudo systemctl reload nginx
 ### 5. Verificar
 
 ```
-https://udemy.antonydev.tech/victor-robles-web/08-desarrollo-web-ia-openai-deepseek-javascript-nodejs/05-assistant-de-dietas-openai/
+https://udemy.antonydev.tech/victor-robles-web/08-desarrollo-web-ia-openai-deepseek-javascript-nodejs/06-narraciones-openai/
 ```
 
 ---
 
 ## Endpoint API
 
-### `POST /api/nutri-chatbot`
+### `POST /api/speak`
 
-Recibe un mensaje del usuario y gestiona el flujo conversacional para recopilar los datos necesarios para generar la dieta semanal personalizada. Una vez completados todos los datos, genera la dieta usando la Chat Completions API de OpenAI.
+Recibe un texto y una voz, llama a la Audio Speech API de OpenAI (modelo `tts-1`, formato `mp3`) y devuelve el audio generado como binario.
 
 **Request body:**
 
 ```json
 {
-  "message": "75",
-  "userId": 1718345678901
+  "text": "Hola, esto es una prueba de narracion.",
+  "speaker": "alloy"
 }
 ```
 
-**Respuesta 200 (exito - siguiente pregunta):**
+**Respuesta 200 (exito):**
 
-```json
-{
-  "reply": "¿Cuanto mides (cm)?"
-}
-```
-
-**Respuesta 200 (exito - dieta generada):**
-
-```json
-{
-  "reply": "¡Aqui tienes tu dieta! \n\n | Dia | Comida | Alimentos | Nombre del plato | Calorias |\n|---|---|---|---|---|\n| Lunes | Desayuno | ..."
-}
-```
+- Header `Content-Type: audio/mpeg`
+- Header `Content-Disposition: attachment; filename="narracion.mp3"`
+- Body: buffer binario con el MP3.
 
 **Respuesta 400 (solicitud invalida):**
 
 ```json
-{
-  "reply": "Solicitud invalida. Se requieren los campos \"userId\" de tipo number y \"message\" de tipo string."
-}
+{ "error": "Debes mandar un audio" }
 ```
 
-**Respuesta 500 (error interno / fallo de OpenAI):**
+**Respuesta 500 (error interno / voz no soportada / fallo de OpenAI):**
 
 ```json
-{
-  "reply": "Error al generar la dieta. Por favor, intentalo de nuevo mas tarde."
-}
+{ "error": "Error interno del servidor" }
 ```
 
 Tambien accesible en la ruta con prefijo:
 
 ```
-POST /victor-robles-web/08-desarrollo-web-ia-openai-deepseek-javascript-nodejs/05-assistant-de-dietas-openai/api/nutri-chatbot
+POST /victor-robles-web/08-desarrollo-web-ia-openai-deepseek-javascript-nodejs/06-narraciones-openai/api/speak
 ```
 
 ---
 
-## Flujo conversacional
+## Voces disponibles
 
-El asistente realiza las siguientes preguntas en orden, almacenando cada respuesta por `userId`:
+El frontend muestra unicamente las **6 voces validas para el modelo `tts-1`** de OpenAI. Otras voces como `ash`, `ballad`, `coral`, `sage`, `verse`, `marin` o `cedar` pertenecen al modelo `gpt-4o-mini-tts` y provocarian un `500` en este backend.
 
-| Paso | Pregunta del asistente                        | Dato recopilado        |
-|------|-----------------------------------------------|------------------------|
-| 1    | Mensaje de bienvenida + ¿Cual es tu peso (kg)? | `peso`                 |
-| 2    | ¿Cuanto mides (cm)?                            | `altura`               |
-| 3    | ¿Cual es tu objetivo?                          | `objetivo`             |
-| 4    | ¿Tienes alguna alergia?                        | `alergias`             |
-| 5    | ¿Que alimentos no te gustan?                   | `alimentosNoGustan`    |
-| 6    | ¿Cuantas comidas diarias haces?                | `comidasDiarias`       |
+| value      | Label     |
+|------------|-----------|
+| `alloy`    | Alloy     |
+| `echo`     | Echo      |
+| `fable`    | Fable     |
+| `nova`     | Nova      |
+| `onyx`     | Onyx      |
+| `shimmer`  | Shimmer   |
 
-Tras recopilar los 6 datos, se envia la peticion a OpenAI con un prompt de nutricionista experto. La respuesta (tabla markdown con la dieta semanal) se renderiza en el frontend como tabla HTML usando `markdown-it`.
+---
 
-Una vez generada la dieta, los datos del usuario se resetean para permitir una nueva consulta.
+## UX del chat
+
+1. El usuario escribe el texto a narrar y elige una voz en el `<select>`.
+2. Al pulsar **Narrar Texto** (o `Enter`), se anade el texto al chat con el prefijo `Tú:`.
+3. Se inserta un mensaje temporal con el prefijo `Narrador: Narrando.` y la clase `chat__message--typing` (estilo italic + opacidad 0.75). Un `setInterval` anima los puntos cada 500 ms.
+4. El backend llama a `openai.audio.speech.create({ model: 'tts-1', voice: speaker, input: text, response_format: 'mp3' })` y devuelve el MP3.
+5. Al recibir el blob, se detiene la animacion, se quita la clase `typing` del mensaje y se sustituye su contenido por:
+   - Un `<audio controls>` con el MP3 (URL.createObjectURL + revokeObjectURL en `loadedmetadata`).
+   - Una etiqueta `Voz: {speaker}` que identifica la voz utilizada.
 
 ---
 
@@ -294,7 +286,7 @@ El proyecto incluye un `gulpfile.js` que genera una version minificada del front
 npm run build
 ```
 
-Salida: carpeta `dist/` con HTML/CSS/JS minificados, `app.js`, `vendor/` con `markdown-it` y un `package.json` minimo.
+Salida: carpeta `dist/` con HTML/CSS/JS minificados, `app.js` y un `package.json` minimo.
 
 Para ejecutar el build:
 
@@ -306,4 +298,4 @@ npm run start:prod
 
 ## Licencia
 
-ISC © AntonyDev
+ISC (c) AntonyDev
