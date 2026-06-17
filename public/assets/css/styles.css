@@ -318,6 +318,30 @@ body {
 }
 
 
+/*  -----  Reproductor de audio y etiqueta del speaker  -----  */
+
+.chat__audio {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.8rem;
+    min-width: 30rem;
+}
+
+.chat__audio audio {
+    width: 100%;
+    min-width: 30rem;
+    outline: none;
+}
+
+.chat__speaker {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--color-msg-user-bg);
+    font-style: italic;
+}
+
+
 /*  -----  chat inputs y botones  -----  */
 
 .chat__input-group {

@@ -219,15 +219,16 @@
 
     /**
      * -----------------------------------------
-     * -----  `appendBotAudio(audioBlob, $typingMessage)`  -----
+     * -----  `appendBotAudio(audioBlob, speaker, messageEl)`  -----
      * -----------------------------------------
-     * - Crea y agrega un reproductor de audio al contenedor del chat.
-     * - Si se pasa un elemento `$typingMessage` (mensaje temporal "Narrando..."), se reemplaza su contenido por el reproductor de audio.
+     * - Crea y agrega un reproductor de audio al contenedor del chat junto con la voz utilizada.
+     * - Si se pasa un elemento `messageEl` (mensaje temporal "Narrando..."), se reemplaza su contenido por el reproductor y el texto del speaker.
      * @param {Blob} audioBlob - `blob de audio MP3 generado por la API`
+     * @param {string} speaker - `voz del narrador utilizada para generar el audio`
      * @param {HTMLDivElement} [messageEl] - `elemento del mensaje del bot donde se insertará el audio`
      */
 
-    const appendBotAudio = (audioBlob, messageEl) => {
+    const appendBotAudio = (audioBlob, speaker, messageEl) => {
 
         /** @type {HTMLDivElement} - `elemento del mensaje de la IA` */
         const $botMessage = messageEl ?? document.createElement('div');
@@ -238,6 +239,12 @@
 
         //  -----  Limpiar el contenido del mensaje (por si viene del estado "Narrando...")  -----
         $botMessage.textContent = '';
+
+        /** @type {HTMLDivElement} - `crear contenedor del reproductor de audio` */
+        const $audioContainer = document.createElement('div');
+
+        //  -----  Agregar clase CSS al contenedor del reproductor de audio  -----
+        $audioContainer.classList.add('chat__audio');
 
         /** @type {HTMLAudioElement} - `crear elemento de audio` */
         const $audio = document.createElement('audio');
@@ -251,8 +258,19 @@
             URL.revokeObjectURL($audio.src);
         });
 
-        //  -----  Agregar el reproductor de audio al mensaje de la IA  -----
-        $botMessage.appendChild($audio);
+        /** @type {HTMLSpanElement} - `crear texto con la voz utilizada` */
+        const $speakerLabel = document.createElement('span');
+
+        //  -----  Configurar el texto del speaker  -----
+        $speakerLabel.classList.add('chat__speaker');
+        $speakerLabel.textContent = `Voz: ${speaker}`;
+
+        //  -----  Agregar el reproductor de audio y la etiqueta del speaker al contenedor  -----
+        $audioContainer.appendChild($audio);
+        $audioContainer.appendChild($speakerLabel);
+
+        //  -----  Agregar el contenedor del audio al mensaje de la IA  -----
+        $botMessage.appendChild($audioContainer);
 
         //  -----  Si no se ha pasado un elemento, agregarlo al contenedor de mensajes del chat  -----
         if (!messageEl)
@@ -327,10 +345,10 @@
             if ($typingMessage) {
 
                 $typingMessage.classList.remove('chat__message--typing');
-                appendBotAudio(audioBlob, $typingMessage);
+                appendBotAudio(audioBlob, speaker, $typingMessage);
 
             } else
-                appendBotAudio(audioBlob);
+                appendBotAudio(audioBlob, speaker);
 
 
             //  -----  Desplazar el contenedor de mensajes del chat hacia abajo para mostrar la nueva respuesta  -----
