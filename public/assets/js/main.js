@@ -180,19 +180,64 @@
 
     /**
      * -----------------------------------------
-     * -----  `appendBotAudio(audioBlob)`  -----
+     * -----  `appendBotMessage(message, isTyping)`  -----
      * -----------------------------------------
-     * - Crea y agrega un reproductor de audio al contenedor del chat.
-     * @param {Blob} audioBlob - `blob de audio MP3 generado por la API`
+     * - Crea y agrega un mensaje de texto del bot al contenedor del chat.
+     * - Si se indica `isTyping`, marca el mensaje como "Narrando..." con su clase específica.
+     * - Devuelve la referencia al elemento creado para poder actualizarlo después (p. ej. reemplazar "Narrando..." por la respuesta final).
+     * @param {string} message - `texto del mensaje del bot`
+     * @param {boolean} [isTyping=false] - `true` para aplicar el estilo del estado "Narrando..."`
+     * @returns {HTMLDivElement | undefined} - `elemento del mensaje del bot añadido al chat`
      */
 
-    const appendBotAudio = (audioBlob) => {
+    const appendBotMessage = (message, isTyping = false) => {
 
         /** @type {HTMLDivElement} - `crear mensaje de la IA` */
         const $botMessage = document.createElement('div');
 
         //  -----  Agregar clases CSS para el mensaje de la IA  -----
         $botMessage.classList.add('chat__message', 'chat__message--bot');
+
+        //  -----  Si es el estado "Narrando...", añadimos su clase específica  -----
+        if (isTyping)
+            $botMessage.classList.add('chat__message--typing');
+
+        //  -----  Establecer el contenido del mensaje de la IA  -----
+        $botMessage.textContent = `Narrador: ${message}`;
+
+        //  -----  Agregar el mensaje de la IA al contenedor de mensajes del chat  -----
+        $chatMessages?.appendChild($botMessage);
+
+        //  -----  Desplazar el contenedor de mensajes del chat hacia abajo para mostrar el nuevo mensaje  -----
+        scrollChat();
+
+        return $botMessage;
+
+    };
+
+
+
+    /**
+     * -----------------------------------------
+     * -----  `appendBotAudio(audioBlob, $typingMessage)`  -----
+     * -----------------------------------------
+     * - Crea y agrega un reproductor de audio al contenedor del chat.
+     * - Si se pasa un elemento `$typingMessage` (mensaje temporal "Narrando..."), se reemplaza su contenido por el reproductor de audio.
+     * @param {Blob} audioBlob - `blob de audio MP3 generado por la API`
+     * @param {HTMLDivElement} [messageEl] - `elemento del mensaje del bot donde se insertará el audio`
+     */
+
+    const appendBotAudio = (audioBlob, messageEl) => {
+
+        /** @type {HTMLDivElement} - `elemento del mensaje de la IA` */
+        const $botMessage = messageEl ?? document.createElement('div');
+
+        //  -----  Si no se ha pasado un elemento, agregar las clases CSS  -----
+        if (!messageEl)
+            $botMessage.classList.add('chat__message', 'chat__message--bot');
+
+        //  -----  Limpiar el contenido del mensaje (por si viene del estado "Narrando...")  -----
+        $botMessage.textContent = '';
 
         /** @type {HTMLAudioElement} - `crear elemento de audio` */
         const $audio = document.createElement('audio');
@@ -209,8 +254,9 @@
         //  -----  Agregar el reproductor de audio al mensaje de la IA  -----
         $botMessage.appendChild($audio);
 
-        //  -----  Agregar el mensaje de la IA al contenedor de mensajes del chat  -----
-        $chatMessages?.appendChild($botMessage);
+        //  -----  Si no se ha pasado un elemento, agregarlo al contenedor de mensajes del chat  -----
+        if (!messageEl)
+            $chatMessages?.appendChild($botMessage);
 
         //  -----  Desplazar el contenedor de mensajes del chat hacia abajo para mostrar el nuevo mensaje  -----
         scrollChat();
@@ -225,6 +271,7 @@
      * ----------------------------------- 
      * @async
      * - Genera la narración del texto ingresado por el usuario utilizando la API de narración.
+     * - Muestra un mensaje "Narrando..." con animación de puntos mientras se espera la respuesta.
      * @returns {Promise<void>} - No devuelve ningún valor, pero actualiza el DOM con los mensajes del usuario y el audio generado.
      * @throws {Error} - Lanza un error si ocurre algún problema durante la narración, como una respuesta no válida de la API o problemas de red.
      */
@@ -247,11 +294,47 @@
         //  -----  Intentar narrar el texto usando la API de narración  -----
         try {
 
+
+            /** @type {HTMLDivElement | undefined} - `elemento temporal con el texto "Narrando..." que se reemplazará al recibir la respuesta` */
+            const $typingMessage = appendBotMessage('Narrando.', true);
+
+            /** @type {number} - `contador de puntos para la animación de "Narrando..."` */
+            let dots = 1;
+
+            /** @type {ReturnType<typeof setInterval> | undefined} - `intervalo que actualiza los puntos del mensaje "Narrando..."` */
+            const typingInterval = setInterval(() => {
+
+                //  -----  Ciclar entre 1, 2 y 3 puntos  -----
+                dots = (dots % 3) + 1;
+
+                //  -----  Actualizar el texto del mensaje "Narrando..." con los puntos correspondientes  -----
+                if ($typingMessage)
+                    $typingMessage.textContent = `Narrador: Narrando${'.'.repeat(dots)}`;
+
+            }, 500);
+
+
             /**  -----  Obtener el audio narrado usando la API de narración  -----  */
             const audioBlob = await fetchNarration(text, speaker);
-            
-            //  -----  Agregar reproductor de audio de la IA al chat  -----
-            appendBotAudio(audioBlob);
+
+
+            //  -----  Detenemos la animación de "Narrando..."  -----
+            clearInterval(typingInterval);
+
+
+            //  -----  Reemplazamos el contenido del mensaje "Narrando..." por el reproductor de audio  -----
+            //  -----  y quitamos la clase de "Narrando..."                              -----
+            if ($typingMessage) {
+
+                $typingMessage.classList.remove('chat__message--typing');
+                appendBotAudio(audioBlob, $typingMessage);
+
+            } else
+                appendBotAudio(audioBlob);
+
+
+            //  -----  Desplazar el contenedor de mensajes del chat hacia abajo para mostrar la nueva respuesta  -----
+            scrollChat();
 
         }
 
